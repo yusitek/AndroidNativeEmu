@@ -169,7 +169,8 @@ class VirtualFileSystem:
                 sys.stderr.buffer.write(mu.mem_read(addr, size))
 
             return 0
-
+        if fd == 0:  ## stdin
+            return 0
         raise NotImplementedError()
 
     def _handle_fstat64(self, mu, fd, buf_ptr):

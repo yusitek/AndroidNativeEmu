@@ -1,6 +1,7 @@
 import math
 import time
 from random import randint
+from os import urandom
 
 import hexdump
 from unicorn import Uc
@@ -36,7 +37,6 @@ class SyscallHooks:
         self._syscall_handler.set_handler(0x14e, "faccessat", 4, self._faccessat)
         self._syscall_handler.set_handler(0x14, "getpid", 0, self._getpid)
         self._syscall_handler.set_handler(0xe0, "gettid", 0, self._gettid)
-        self._syscall_handler.set_handler(0x180,"null1",0, self._null)
         self._syscall_handler.set_handler(0x180, "getrandom", 3, self._getrandom)
         self._clock_start = time.time()
         self._clock_offset = randint(1000, 2000)
@@ -129,14 +129,21 @@ class SyscallHooks:
         errno is set appropriately).
         """
 
-        if clk_id == CLOCK_MONOTONIC_COARSE:
+        if clk_id == CLOCK_REALTIME:
+            ns =   time.time_ns()
+            seconds = int(time.time())
+            ns = ns - seconds * 1000000000
+            mu.mem_write(tp_ptr + 0, seconds.to_bytes(4, byteorder='little'))
+            mu.mem_write(tp_ptr + 4, ns.to_bytes(4, byteorder='little'))
+            return 0
+        elif clk_id == CLOCK_MONOTONIC_COARSE:
             if OVERRIDE_CLOCK:
                 mu.mem_write(tp_ptr + 0, int(OVERRIDE_CLOCK_TIME).to_bytes(4, byteorder='little'))
                 mu.mem_write(tp_ptr + 4, int(0).to_bytes(4, byteorder='little'))
             else:
                 clock_add = time.time() - self._clock_start  # Seconds passed since clock_start was set.
 
-                mu.mem_write(tp_ptr + 0, int(self._clock_start + clock_add).to_bytes(4, byteorder='little'))
+                mu.mem_write(tp_ptr + 0, int(clock_add + 1000).to_bytes(4, byteorder='little')) ## add 1000 seconds (/proc/uptime)
                 mu.mem_write(tp_ptr + 4, int(0).to_bytes(4, byteorder='little'))
             return 0
         else:
@@ -148,8 +155,12 @@ class SyscallHooks:
 
     def _connect(self, mu, fd, addr, addr_len):
         print(hexdump.hexdump(mu.mem_read(addr, addr_len)))
-        raise NotImplementedError()
+        return 0
+        #raise NotImplementedError()
 
-    def _getrandom(self, mu, buf, count, flags):
-        mu.mem_write(buf, b"\x00" * count)
-        return count
+    def _getrandom(self, mu, buf,  buflen, flags):
+        ret = int(buflen/2)
+        rand_bytes = urandom(ret)
+        print('....random...' , rand_bytes, ret)
+        mu.mem_write(buf, rand_bytes)
+        return ret

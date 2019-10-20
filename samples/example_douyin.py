@@ -1,6 +1,11 @@
 import logging
 import posixpath
 import sys
+import os
+
+sys.path[0] = os.getcwd()
+print(sys.path)
+
 
 from unicorn import UcError, UC_HOOK_CODE, UC_HOOK_MEM_UNMAPPED
 from unicorn.arm_const import *
@@ -115,10 +120,10 @@ emulator.java_classloader.add_class(java_lang_StackTraceElement)
 
 # Load all libraries.
 emulator.load_library("samples/example_binaries/libdl.so")
-emulator.load_library("samples/example_binaries/libc.so")
+emulator.load_library("samples/example_binaries/libc.so", True)
 emulator.load_library("samples/example_binaries/libstdc++.so")
 emulator.load_library("samples/example_binaries/libm.so")
-lib_module = emulator.load_library("samples/example_binaries/libcms.so")
+lib_module = emulator.load_library("samples/example_binaries/libcms.so", True)
 
 # Show loaded modules.
 logger.info("Loaded modules:")
@@ -139,7 +144,7 @@ try:
 
 
     # bypass douyin checks
-    with open("misc/samples/app_process32", 'rb') as ap:
+    with open("samples/misc/app_process32", 'rb') as ap:
         data = ap.read()
         len1 = len(data) + 1024 - (len(data) % 1024)
         emulator.mu.mem_map(0xab006000, len1)

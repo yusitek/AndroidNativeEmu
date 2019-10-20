@@ -1,5 +1,9 @@
 import logging
 import sys
+import os
+
+sys.path[0] = os.getcwd()
+print(sys.path)
 
 from unicorn import UC_HOOK_CODE
 from unicorn.arm_const import *
